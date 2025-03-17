@@ -1,16 +1,21 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-from sklearn.datasets import fetch_california_housing, load_diabetes, load_wine, load_breast_cancer
+from sklearn.datasets import fetch_california_housing, load_diabetes, load_wine, load_breast_cancer, load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import numpy as np
+
 
 class TorchDataset(Dataset):
     def __init__(self, X, y):
         self.X = torch.tensor(X, dtype=torch.float32)
         self.y = torch.tensor(y, dtype=torch.float32)
+
+        # Ensure classification labels are long, regression labels are 2D float
         if len(self.y.shape) == 1:
-            self.y = self.y.unsqueeze(1)
+            if y.dtype == int or y.dtype == torch.int64:
+                self.y = self.y.long()  # Classification
+            else:
+                self.y = self.y.unsqueeze(1)  # Regression (makes shape [batch_size, 1])
 
     def __len__(self):
         return len(self.X)
@@ -24,6 +29,7 @@ def load_dataset(name, batch_size=32, test_size=0.2):
         "diabetes": load_diabetes,
         "wine": load_wine,
         "breast_cancer": load_breast_cancer,
+        "iris": load_iris
     }
     
     if name not in datasets:
