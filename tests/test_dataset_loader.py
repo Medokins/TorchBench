@@ -4,7 +4,7 @@ from datasets.dataset_loader import load_dataset
 
 class TestDatasetLoader(unittest.TestCase):
     def test_load_all_datasets(self):
-        datasets = ["california_housing", "diabetes", "wine", "breast_cancer"]
+        datasets = ["california_housing", "diabetes", "wine", "breast_cancer", "iris"]
         
         for dataset_name in datasets:
             with self.subTest(dataset=dataset_name):
@@ -21,9 +21,9 @@ class TestDatasetLoader(unittest.TestCase):
 
     def test_load_unsupported_dataset(self):
         with self.assertRaises(ValueError) as context:
-            load_dataset("iris")
+            load_dataset("wrong_dataset")
 
-        assert("Dataset 'iris' not supported" in str(context.exception))
+        assert("Dataset 'wrong_dataset' not supported" in str(context.exception))
 
 
 if __name__ == "__main__":
