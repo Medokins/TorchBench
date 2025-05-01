@@ -19,33 +19,43 @@ class DatabaseHandler:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 model_architecture TEXT,
                 dataset_name TEXT,
+                criterion TEXT,
+                optimizer TEXT,
                 result_json TEXT
             )
         ''')
         conn.commit()
         conn.close()
 
-    def save_result(self, model_architecture, dataset_name, result_dict):
+    def save_result(self, model_architecture, dataset_name, criterion, optimizer, result_dict):
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO benchmarks (model_architecture, dataset_name, result_json)
-            VALUES (?, ?, ?)
-        ''', (model_architecture, dataset_name, json.dumps(result_dict)))
+            INSERT INTO benchmarks (model_architecture, dataset_name, criterion, optimizer, result_json)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            model_architecture,
+            dataset_name,
+            str(criterion),
+            str(optimizer),
+            json.dumps(result_dict)
+        ))
         conn.commit()
         conn.close()
 
     def search_result(self, 
                       model, 
                       dataset_name, 
+                      criterion=None,
+                      optimizer=None,
                       match_mode="exact", 
                       similarity_threshold=0.9, 
-                      similarity_method="structure"):
-        
+                      similarity_method="graph_structural"):
+                
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT model_architecture, dataset_name, result_json FROM benchmarks
+            SELECT model_architecture, dataset_name, criterion, optimizer, result_json FROM benchmarks
             WHERE dataset_name = ?
         ''', (dataset_name,))
 
@@ -53,13 +63,13 @@ class DatabaseHandler:
         conn.close()
 
         if match_mode == "exact":
-            for db_model, dataset, result_json in entries:
-                if db_model == model:
+            model = str(model)
+            for db_model, db_dataset, db_criterion, db_optimizer, result_json in entries:
+                if db_model == model and db_optimizer == str(optimizer) and db_criterion == str(criterion):
                     return json.loads(result_json)
 
-
         elif match_mode == "similar":
-            for db_model, dataset, result_json in entries:
+            for db_model, db_dataset, db_criterion, db_optimizer, result_json in entries:
                 comparator = ArchitectureComparator(model, db_model, method=similarity_method)
                 similarity = comparator.compute_similarity()
                 if similarity >= similarity_threshold:

@@ -5,19 +5,34 @@ from database.database_handler import DatabaseHandler
 from datasets.dataset_loader import load_dataset
 
 
+def stringify_criterion(criterion):
+    return criterion.__class__.__name__
+
+def stringify_optimizer(optimizer):
+    opt_class = optimizer.__class__.__name__
+    opt_params = optimizer.defaults
+    return f"{opt_class}({opt_params})"
+
 def main():
     model = nn.Sequential(
-            nn.Linear(4, 16),
+            nn.Linear(4, 10),
             nn.ReLU(),
-            nn.Linear(16, 3)
+            nn.Linear(10, 3)
         )
     dataset_name = "iris"
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.01)
+    criterion_str = stringify_criterion(criterion)
+    optimizer_str = stringify_optimizer(optimizer)
 
     db_handler = DatabaseHandler()
-    architecture_str = str(model)
-    existing_result = db_handler.search_result(architecture_str, dataset_name, match_mode="exact")
+    existing_result = db_handler.search_result(
+        model,
+        dataset_name,
+        criterion_str,
+        optimizer_str,
+        match_mode="exact"
+    )
     
     if existing_result:
         print("Exact match found in database. Returning saved result.")
@@ -25,17 +40,16 @@ def main():
     else:
         print("No Exact match found in database. Trying to find similar...")
 
-
     similar_result = db_handler.search_result(
-        architecture_str, 
+        model,
         dataset_name, 
-        match_mode="similar", 
+        match_mode="similar",
         similarity_threshold=0.9, 
-        similarity_method="structure"
+        similarity_method="string"
     )
 
     if similar_result:
-        print("Similar model found in database (based on structure comparison).")
+        print("Similar model found in database (based on string comparison).")
         return similar_result
     else:
         print("No similar match found in database. Running benchmark")
@@ -44,9 +58,8 @@ def main():
     benchmark = Benchmark(model, train_loader, test_loader, criterion, optimizer, epochs=5)
     results = benchmark.benchmark_model()
 
-    db_handler.save_result(architecture_str, dataset_name, results)
+    db_handler.save_result(str(model), dataset_name, criterion_str, optimizer_str, results)
     print("Benchmark complete. Results saved to database.")
-    print(results)
     return results
 
 

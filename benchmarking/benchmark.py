@@ -48,7 +48,6 @@ class Benchmark:
                 total_loss += loss.item()
 
         avg_loss = total_loss / len(self.test_loader)
-        print(f"Test Loss: {avg_loss:.4f}")
         return avg_loss
 
     def benchmark_model(self):

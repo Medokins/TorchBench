@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.fx as fx
+import difflib
 
 
 class ArchitectureComparator:
@@ -94,11 +95,18 @@ class ArchitectureComparator:
                 matches += 1
 
         return matches / max_len
+    
+    def string_similarity(self):
+        str_a = str(self.model_a)
+        str_b = str(self.model_b)
+        return difflib.SequenceMatcher(None, str_a, str_b).ratio()
 
     def compute_similarity(self):
         if self.method == "graph_structural":
             return self.structural_similarity()
         elif self.method == "graph_structural_with_params":
             return self.structural_similarity_with_params()
+        elif self.method == "string":
+            return self.string_similarity()
         else:
             raise ValueError(f"Unknown comparison method: {self.method}")
