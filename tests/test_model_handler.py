@@ -24,7 +24,3 @@ class TestModelHandler(unittest.TestCase):
         handler.save_model("test_model.pth")
         handler.load_model("test_model.pth")
         self.assertIsInstance(handler.model, torch.nn.Module)
-
-
-if __name__ == "__main__":
-    unittest.main()

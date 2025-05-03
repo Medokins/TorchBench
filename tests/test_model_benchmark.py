@@ -2,7 +2,7 @@ import unittest
 import torch
 import torch.nn as nn
 from datasets.dataset_loader import load_dataset
-from benchmarking.benchmark import benchmark_model
+from benchmarking.benchmark import Benchmark
 
 
 class TestBenchmark(unittest.TestCase):
@@ -16,16 +16,16 @@ class TestBenchmark(unittest.TestCase):
         optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
         train_loader, test_loader = load_dataset("iris")
-        results = benchmark_model(model, train_loader, test_loader, criterion, optimizer, epochs=5)
+        benchmark = Benchmark(model, train_loader, test_loader, criterion, optimizer, epochs=5)
+        results = benchmark.benchmark_model()
         
         self.assertIsInstance(results, dict)
         print(results)
         self.assertIn("avg_train_loss", results)
-        self.assertIn("avg_test_loss", results)
+        self.assertIn("test_loss", results)
         self.assertIn("train_losses", results)
-        self.assertIn("test_losses", results)
         self.assertGreater(results["final_train_loss"], 0)
-        self.assertGreater(results["final_test_loss"], 0)
+        self.assertGreater(results["test_loss"], 0)
 
     def test_benchmark_model_regression(self):
         model = nn.Sequential(
@@ -37,17 +37,13 @@ class TestBenchmark(unittest.TestCase):
         optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
         train_loader, test_loader = load_dataset("california_housing")
-        results = benchmark_model(model, train_loader, test_loader, criterion, optimizer, epochs=5)
+        benchmark = Benchmark(model, train_loader, test_loader, criterion, optimizer, epochs=5)
+        results = benchmark.benchmark_model()
 
         self.assertIsInstance(results, dict)
         print(results)
         self.assertIn("avg_train_loss", results)
-        self.assertIn("avg_test_loss", results)
+        self.assertIn("test_loss", results)
         self.assertIn("train_losses", results)
-        self.assertIn("test_losses", results)
         self.assertGreater(results["final_train_loss"], 0)
-        self.assertGreater(results["final_test_loss"], 0)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        self.assertGreater(results["test_loss"], 0)
