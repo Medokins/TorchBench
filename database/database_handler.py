@@ -1,6 +1,7 @@
 import sqlite3
 import json
 from benchmarking.architecture_similarity import ArchitectureComparator
+from benchmarking.recreate_model_from_str import recreate_model_from_string
 
 
 class DatabaseHandler:
@@ -69,7 +70,8 @@ class DatabaseHandler:
                     return json.loads(result_json)
 
         elif match_mode == "similar":
-            for db_model, db_dataset, db_criterion, db_optimizer, result_json in entries:
+            for db_model_str, db_dataset, db_criterion, db_optimizer, result_json in entries:
+                db_model = recreate_model_from_string(db_model_str)
                 comparator = ArchitectureComparator(model, db_model, method=similarity_method)
                 similarity = comparator.compute_similarity()
                 if similarity >= similarity_threshold:

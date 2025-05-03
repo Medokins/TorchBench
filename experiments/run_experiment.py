@@ -3,15 +3,8 @@ import torch.optim as optim
 from benchmarking.benchmark import Benchmark
 from database.database_handler import DatabaseHandler
 from datasets.dataset_loader import load_dataset
+from utils.helpers import stringify_criterion, stringify_optimizer
 
-
-def stringify_criterion(criterion):
-    return criterion.__class__.__name__
-
-def stringify_optimizer(optimizer):
-    opt_class = optimizer.__class__.__name__
-    opt_params = optimizer.defaults
-    return f"{opt_class}({opt_params})"
 
 def main():
     model = nn.Sequential(
