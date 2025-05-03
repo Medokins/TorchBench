@@ -65,7 +65,6 @@ class Benchmark:
         return {
             "model_architecture": str(self.model),
             "train_losses": train_losses,
-            "test_losses": test_loss,
             "avg_train_loss": sum(train_losses) / len(train_losses),
             "final_train_loss": train_losses[-1],
             "test_loss": test_loss
