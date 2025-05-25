@@ -20,6 +20,7 @@ class DatabaseHandler:
             CREATE TABLE IF NOT EXISTS benchmarks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 dataset_name TEXT,
+                dataset_hash TEXT,
                 criterion TEXT,
                 optimizer TEXT,
                 result_json TEXT,
@@ -29,7 +30,7 @@ class DatabaseHandler:
         conn.commit()
         conn.close()
 
-    def save_result(self, model, dataset_name, criterion, optimizer, result_dict):
+    def save_result(self, model, dataset_name, dataset_hash, criterion, optimizer, result_dict):
         conn = self._connect()
         cursor = conn.cursor()
 
@@ -38,10 +39,11 @@ class DatabaseHandler:
         model_blob = buffer.getvalue()
 
         cursor.execute('''
-            INSERT INTO benchmarks (dataset_name, criterion, optimizer, result_json, model_blob)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO benchmarks (dataset_name, dataset_hash, criterion, optimizer, result_json, model_blob)
+            VALUES (?, ?, ?, ?, ?, ?)
         ''', (
             dataset_name,
+            dataset_hash,
             str(criterion),
             str(optimizer),
             json.dumps(result_dict),
@@ -50,22 +52,21 @@ class DatabaseHandler:
         conn.commit()
         conn.close()
 
-
     def search_result(self, 
-                  model, 
-                  dataset_name, 
-                  criterion=None,
-                  optimizer=None,
-                  match_mode="exact", 
-                  similarity_threshold=0.9, 
-                  similarity_method="graph_structural"):
+                      model, 
+                      dataset_hash, 
+                      criterion=None,
+                      optimizer=None,
+                      match_mode="exact", 
+                      similarity_threshold=0.9, 
+                      similarity_method="graph_structural"):
 
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute('''
             SELECT model_blob, result_json, criterion, optimizer FROM benchmarks
-            WHERE dataset_name = ?
-        ''', (dataset_name,))
+            WHERE dataset_hash = ?
+        ''', (dataset_hash,))
 
         entries = cursor.fetchall()
         conn.close()
