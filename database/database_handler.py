@@ -1,7 +1,8 @@
 import sqlite3
 import json
+import io
+import torch
 from benchmarking.architecture_similarity import ArchitectureComparator
-from benchmarking.recreate_model_from_str import recreate_model_from_string
 
 
 class DatabaseHandler:
@@ -18,45 +19,51 @@ class DatabaseHandler:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS benchmarks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                model_architecture TEXT,
                 dataset_name TEXT,
                 criterion TEXT,
                 optimizer TEXT,
-                result_json TEXT
+                result_json TEXT,
+                model_blob BLOB
             )
         ''')
         conn.commit()
         conn.close()
 
-    def save_result(self, model_architecture, dataset_name, criterion, optimizer, result_dict):
+    def save_result(self, model, dataset_name, criterion, optimizer, result_dict):
         conn = self._connect()
         cursor = conn.cursor()
+
+        buffer = io.BytesIO()
+        torch.save(model, buffer)
+        model_blob = buffer.getvalue()
+
         cursor.execute('''
-            INSERT INTO benchmarks (model_architecture, dataset_name, criterion, optimizer, result_json)
+            INSERT INTO benchmarks (dataset_name, criterion, optimizer, result_json, model_blob)
             VALUES (?, ?, ?, ?, ?)
         ''', (
-            model_architecture,
             dataset_name,
             str(criterion),
             str(optimizer),
-            json.dumps(result_dict)
+            json.dumps(result_dict),
+            model_blob
         ))
         conn.commit()
         conn.close()
 
+
     def search_result(self, 
-                      model, 
-                      dataset_name, 
-                      criterion=None,
-                      optimizer=None,
-                      match_mode="exact", 
-                      similarity_threshold=0.9, 
-                      similarity_method="graph_structural"):
-                
+                  model, 
+                  dataset_name, 
+                  criterion=None,
+                  optimizer=None,
+                  match_mode="exact", 
+                  similarity_threshold=0.9, 
+                  similarity_method="graph_structural"):
+
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT model_architecture, dataset_name, criterion, optimizer, result_json FROM benchmarks
+            SELECT model_blob, result_json, criterion, optimizer FROM benchmarks
             WHERE dataset_name = ?
         ''', (dataset_name,))
 
@@ -64,17 +71,39 @@ class DatabaseHandler:
         conn.close()
 
         if match_mode == "exact":
-            model = str(model)
-            for db_model, db_dataset, db_criterion, db_optimizer, result_json in entries:
-                if db_model == model and db_optimizer == str(optimizer) and db_criterion == str(criterion):
-                    return json.loads(result_json)
+            for model_blob, result_json, db_criterion, db_optimizer in entries:
+                try:
+                    buffer = io.BytesIO(model_blob)
+                    candidate_model = torch.load(buffer, weights_only=False)
+                    candidate_model.eval()
+
+                    comparator = ArchitectureComparator(model, candidate_model, method="graph_structural_with_params")
+                    similarity = comparator.compute_similarity()
+
+                    if (
+                        similarity == 1.0 and
+                        db_criterion == str(criterion) and
+                        db_optimizer == str(optimizer)
+                    ):
+                        return candidate_model, json.loads(result_json)
+
+                except Exception as e:
+                    print(f"Error loading exact model: {e}")
+                    continue
 
         elif match_mode == "similar":
-            for db_model_str, db_dataset, db_criterion, db_optimizer, result_json in entries:
-                db_model = recreate_model_from_string(db_model_str)
-                comparator = ArchitectureComparator(model, db_model, method=similarity_method)
+            for model_blob, result_json, db_criterion, db_optimizer in entries:
+                try:
+                    buffer = io.BytesIO(model_blob)
+                    candidate_model = torch.load(buffer, weights_only=False)
+                    candidate_model.eval()
+                except Exception as e:
+                    print(f"Skipping entry due to error: {e}")
+                    continue
+
+                comparator = ArchitectureComparator(model, candidate_model, method=similarity_method)
                 similarity = comparator.compute_similarity()
                 if similarity >= similarity_threshold:
-                    return json.loads(result_json)
+                    return candidate_model, json.loads(result_json)
 
-        return None
+        return None, None

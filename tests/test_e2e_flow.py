@@ -35,13 +35,13 @@ class TestEndToEndFlow(unittest.TestCase):
         train_loader, test_loader = load_dataset(self.dataset_name)
         benchmark = Benchmark(self.model_exact, train_loader, test_loader, self.criterion, self.optimizer, epochs=5)
         results = benchmark.benchmark_model()
-        self.db_handler.save_result(str(self.model_exact), self.dataset_name, self.criterion_str, self.optimizer_str, results)
+        self.db_handler.save_result(self.model_exact, self.dataset_name, self.criterion_str, self.optimizer_str, results)
 
     def tearDown(self):
         os.unlink(self.temp_db_file.name)
 
     def test_exact_match_found(self):
-        result = self.db_handler.search_result(
+        model, result = self.db_handler.search_result(
             self.model_exact,
             self.dataset_name,
             self.criterion_str,
@@ -52,7 +52,7 @@ class TestEndToEndFlow(unittest.TestCase):
         self.assertIn("avg_train_loss", result)
 
     def test_similar_match_graph_structural(self):
-        result = self.db_handler.search_result(
+        model, result = self.db_handler.search_result(
             self.model_similar,
             self.dataset_name,
             match_mode="similar",
@@ -62,7 +62,7 @@ class TestEndToEndFlow(unittest.TestCase):
         self.assertIsNotNone(result)
 
     def test_similar_match_graph_with_params_high(self):
-        result = self.db_handler.search_result(
+        model, result = self.db_handler.search_result(
             self.model_similar,
             self.dataset_name,
             match_mode="similar",
@@ -72,7 +72,7 @@ class TestEndToEndFlow(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_similar_match_graph_with_params_low(self):
-        result = self.db_handler.search_result(
+        model, result = self.db_handler.search_result(
             self.model_similar,
             self.dataset_name,
             match_mode="similar",
@@ -82,7 +82,7 @@ class TestEndToEndFlow(unittest.TestCase):
         self.assertIsNotNone(result)
 
     def test_similar_match_string(self):
-        result = self.db_handler.search_result(
+        model, result = self.db_handler.search_result(
             self.model_similar,
             self.dataset_name,
             match_mode="similar",
@@ -98,14 +98,14 @@ class TestEndToEndFlow(unittest.TestCase):
             nn.Linear(32, 3)
         )
 
-        result = self.db_handler.search_result(
+        model, result = self.db_handler.search_result(
             new_model,
             self.dataset_name,
             match_mode="exact"
         )
         self.assertIsNone(result)
 
-        result = self.db_handler.search_result(
+        model, result = self.db_handler.search_result(
             new_model,
             self.dataset_name,
             match_mode="similar",
