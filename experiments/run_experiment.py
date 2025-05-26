@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.optim as optim
 from benchmarking.benchmark import Benchmark
-from database.database_handler import DatabaseHandler
+from database.api_database_handler import APIDatabaseHandler as DatabaseHandler
 from datasets.dataset_loader import load_dataset
 from utils.helpers import stringify_criterion, stringify_optimizer
 
@@ -10,9 +10,9 @@ def main():
     model = nn.Sequential(
         nn.Linear(4, 10),
         nn.ReLU(),
-        nn.Linear(10, 10)
+        nn.Linear(10, 3)
     )
-    dataset_name = "breast_cancer"
+    dataset_name = "iris"
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     criterion_str = stringify_criterion(criterion)

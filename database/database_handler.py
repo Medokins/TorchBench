@@ -108,3 +108,14 @@ class DatabaseHandler:
                     return candidate_model, json.loads(result_json)
 
         return None, None
+    
+    def get_all_by_dataset_hash(self, dataset_hash):
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT model_blob, result_json, criterion, optimizer FROM benchmarks
+            WHERE dataset_hash = ?
+        ''', (dataset_hash,))
+        results = cursor.fetchall()
+        conn.close()
+        return results
